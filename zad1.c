@@ -90,23 +90,23 @@ void FindPassword(int i)
 
     for (int k = 0; k < SizePassToCrack; k++)
     {
+        // Skip if password found earlier
         if(PassToCrack[k] == "\0")
         {
             continue;
         }
         else if(strcmp(DictionaryHashedWord, PassToCrack[k]) == 0)
         {
-            // I probably have to erase password here if found
+            // Erasing password here if found
             pthread_mutex_lock(&mut);
             PassToCrack[k] = "\0";  // You can't free this dynamically allocated table. Is it caused by assigning a const char*? 
             Solved[SolvedCount] = PassDictionary[i];
             SolvedCount++;
 
+            // Telling watcher to wake up
             pthread_cond_signal(&cond_mutex);
 
             pthread_mutex_unlock(&mut);
-            // while(SolvedCount == TemporaryCounter)
-            // {  }
             break;
         }   
     }
@@ -210,6 +210,8 @@ void *Watcher(void *arg)
     {
         printf("Waiting\n");
         pthread_cond_wait(&cond_mutex, &mut);
+
+        // When woken up print out new passwords found
         for (PrintedSolved; PrintedSolved < SolvedCount; PrintedSolved++)
         {
             printf("PrintedSolved %d\t %d\n", PrintedSolved, SolvedCount);
