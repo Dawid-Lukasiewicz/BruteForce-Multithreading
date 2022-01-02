@@ -90,7 +90,7 @@ void FindPassword(int i)
 
     for (int k = 0; k < SizePassToCrack; k++)
     {
-        if(PassToCrack[k] == NULL)
+        if(PassToCrack[k] == "\0")
         {
             continue;
         }
@@ -98,15 +98,15 @@ void FindPassword(int i)
         {
             // I probably have to erase password here if found
             pthread_mutex_lock(&mut);
-            PassToCrack[k] = NULL;
-            int TemporaryCounter = SolvedCount;
+            PassToCrack[k] = "\0";  // You can't free this dynamically allocated table. Is it caused by assigning a const char*? 
             Solved[SolvedCount] = PassDictionary[i];
+            SolvedCount++;
 
             pthread_cond_signal(&cond_mutex);
 
             pthread_mutex_unlock(&mut);
-            while(SolvedCount == TemporaryCounter)
-            {  }
+            // while(SolvedCount == TemporaryCounter)
+            // {  }
             break;
         }   
     }
@@ -203,14 +203,18 @@ void *OnlyNumber(void *arg)
 
 void *Watcher(void *arg)
 {
+    int PrintedSolved = 0;
+
     pthread_mutex_lock(&mut);
     while (ThreadsFinished < NUMTHRDS - 1)
     {
         printf("Waiting\n");
         pthread_cond_wait(&cond_mutex, &mut);
-
-        printf("Solved %d: %s\n",SolvedCount, Solved[SolvedCount]);
-        SolvedCount++;
+        for (PrintedSolved; PrintedSolved < SolvedCount; PrintedSolved++)
+        {
+            printf("PrintedSolved %d\t %d\n", PrintedSolved, SolvedCount);
+            printf("Solved %d: %s\n",PrintedSolved, Solved[PrintedSolved]);    
+        }
     }
     pthread_mutex_unlock(&mut);
 
@@ -239,6 +243,10 @@ int main(int argc, char *argv[])
     SizePassToCrack = MakeTablePass(&PassToCrack, PasswFile1M);
     SizePassDictionary = MakeTablePass(&PassDictionary, PasswFileDict);
 
+    // Closing files
+    fclose(PasswFile1M);
+    fclose(PasswFileDict);
+
     // Hashing passwords and allocating memory for table of solved passwords
     Solved = (char**)malloc(SizePassToCrack*sizeof(char*));
     for (int i = 0; i < SizePassToCrack; i++)
@@ -261,38 +269,14 @@ int main(int argc, char *argv[])
     pthread_join(threads[2], NULL);
     pthread_join(threads[3], NULL);
 
-    // int Count = 0;
-    // for (int i = 0; i < SizePassToCrack; i++)
-    // {
-    //     if(Solved[i] != NULL)
-    //     {
-    //         puts(Solved[i]);
-    //         Count++;
-    //     }
-    //     else
-    //     {
-    //         printf("found %d\n", Count);
-    //         break;
-    //     }
-    // }
-
     pthread_cond_destroy(&cond_mutex);
     // Freeing allocated memory
-    for (int i = 0; i < SizePassToCrack; i++)
-    {
-        free(PassToCrack[i]);
-        // free(Solved[i]);
-    }
-    free(PassToCrack);
-    // free(Solved);
+    
     for (int i = 0; i < SizePassDictionary; i++)
     {
         free(PassDictionary[i]);
     }
     free(PassDictionary);
-    // Closing files
-    fclose(PasswFile1M);
-    fclose(PasswFileDict);
 	
 	return 0;
 }
