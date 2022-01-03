@@ -1,7 +1,6 @@
 /****************************************************************
 * AUTHOR:   Dawid Łukasiewicz
-* COMPILE:  gcc yourprogram.c -lssl -lcrypto
-* REVISED: 30.12.2021
+* COMPILE:  gcc zad1.c -lssl -lcrypto
 ****************************************************************/
 
 #include <stdio.h>
@@ -98,7 +97,7 @@ void FindPassword(int i)
         {
             // Erasing password here if found
             pthread_mutex_lock(&mut);
-            PassToCrack[k] = "\0";  // You can't free this dynamically allocated table. Is it caused by assigning a const char*? 
+            PassToCrack[k] = "\0";  // Now you can't free this dynamically allocated table. Is it caused by assigning a const char*? 
             Solved[SolvedCount] = PassDictionary[i];
             SolvedCount++;
 
@@ -110,27 +109,33 @@ void FindPassword(int i)
         }
         else
         {
-            char TemporaryBuffer1[STRING_SIZE], TemporaryBuffer2[STRING_SIZE], Helper[STRING_SIZE];
+            /** I probably need addittional loop to add more chars **/
+            // Do ModPass1 dopisywane są znaki na końcu
+            // Do ModPass2 na początku
+            char ModPass1[STRING_SIZE], ModPass2[STRING_SIZE], Helper1[STRING_SIZE], Helper2[STRING_SIZE];
+            char AsciToChar[4];
             bool Find = false;
             for (int d = 33; d < 127; d++)
             {
-                // Copying
-                strcpy(TemporaryBuffer1, PassDictionary[i]);
-                // Writing to
-                strcat(TemporaryBuffer1, (char)d);
+                // Copying dictionary password
+                strncpy(ModPass1, PassDictionary[i], strlen(PassDictionary[i]) - 1);
+                strncpy(Helper2, PassDictionary[i], strlen(PassDictionary[i]));
+                // Getting char from ascii
+                sprintf(AsciToChar, "%c\n", d);
+                strcpy(Helper1, AsciToChar);
+                strncpy(ModPass2, AsciToChar, strlen(AsciToChar) - 1);
+                // Merging dictionary password with new letter
+                strcat(ModPass1, Helper1);
+                strcat(ModPass2, Helper2);
                 
-                // Copying
-                strcpy(Helper, PassDictionary[i]);
-                strcpy(TemporaryBuffer2, (char)d);
-                // Writing to
-                strcat(TemporaryBuffer2, Helper);
+                printf("%s %s", ModPass1, ModPass2);
 
-                if(strcmp(md5(TemporaryBuffer1, strlen(TemporaryBuffer1)), PassToCrack[k]) == 0)
+                if(strcmp(md5(ModPass1, strlen(ModPass1)), PassToCrack[k]) == 0)
                 {
                     // Erasing password here if found
                     pthread_mutex_lock(&mut);
                     PassToCrack[k] = "\0";
-                    Solved[SolvedCount] = TemporaryBuffer1;
+                    Solved[SolvedCount] = ModPass1;
                     SolvedCount++;
 
                     // Telling watcher to wake up
@@ -140,12 +145,12 @@ void FindPassword(int i)
                     Find = true;
                     break;
                 }
-                else if(strcmp(md5(TemporaryBuffer2, strlen(TemporaryBuffer2)), PassToCrack[k]) == 0)
+                else if(strcmp(md5(ModPass2, strlen(ModPass2)), PassToCrack[k]) == 0)
                 {
                     // Erasing password here if found
                     pthread_mutex_lock(&mut);
                     PassToCrack[k] = "\0";
-                    Solved[SolvedCount] = TemporaryBuffer2;
+                    Solved[SolvedCount] = ModPass2;
                     SolvedCount++;
 
                     // Telling watcher to wake up
@@ -155,6 +160,13 @@ void FindPassword(int i)
                     Find = true;
                     break;
                 }
+                // Clearing strings variables
+                memset(ModPass1, 0, strlen(ModPass1));
+                memset(ModPass2, 0, strlen(ModPass2));
+                memset(Helper1, 0, strlen(Helper1));
+                memset(Helper2, 0, strlen(Helper2));
+                
+                sleep(1);
             }
             if (Find == true)
                 break;
@@ -309,18 +321,18 @@ int main(int argc, char *argv[])
         PassToCrack[i] = md5(PassToCrack[i], strlen(PassToCrack[i]));
     }
 
-    pthread_create(&threads[3], &attr, Watcher, (void*)3);
-    sleep(3);
+    // pthread_create(&threads[3], &attr, Watcher, (void*)3);
+    // sleep(3);
     pthread_create(&threads[0], &attr, OnlyCharacter, (void*)0);
-    pthread_create(&threads[1], &attr, MixedComparison, (void*)1);
-    pthread_create(&threads[2], &attr, OnlyNumber, (void*)2);
+    // pthread_create(&threads[1], &attr, MixedComparison, (void*)1);
+    // pthread_create(&threads[2], &attr, OnlyNumber, (void*)2);
     
     
     pthread_attr_destroy(&attr);
     pthread_join(threads[0], NULL);
-    pthread_join(threads[1], NULL);
-    pthread_join(threads[2], NULL);
-    pthread_join(threads[3], NULL);
+    // pthread_join(threads[1], NULL);
+    // pthread_join(threads[2], NULL);
+    // pthread_join(threads[3], NULL);
 
     pthread_cond_destroy(&cond_mutex);
     // Freeing allocated memory
