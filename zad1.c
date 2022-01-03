@@ -12,11 +12,11 @@
 #include <pthread.h>
 #include <openssl/md5.h>
 
-#define STRING_SIZE 33
+#define STRING_SIZE 50
 #define NUMTHRDS 4
 // Global variables for threads
-pthread_mutex_t mut;// = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_thread_done;// = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mut;
+pthread_mutex_t mutex_thread_done;
 pthread_cond_t cond_mutex;
 
 int SizePassToCrack, SizePassDictionary;
@@ -24,7 +24,7 @@ int ThreadsFinished = 0;
 int SolvedCount = 0;
 FILE *PasswFile1M, *PasswFileDict;
 char **PassToCrack, **PassDictionary;
-char **Solved, TemporaryBuffer[STRING_SIZE];
+char **Solved;
 
 char* md5(const char *str, int length) {
     int n;
@@ -85,7 +85,6 @@ int MakeTablePass(char ***OriginalTablePass, FILE *file)
 
 void FindPassword(int i)
 {
-    bool Find = false;
     char *DictionaryHashedWord = md5(PassDictionary[i], strlen(PassDictionary[i]));
 
     for (int k = 0; k < SizePassToCrack; k++)
@@ -108,7 +107,59 @@ void FindPassword(int i)
 
             pthread_mutex_unlock(&mut);
             break;
-        }   
+        }
+        else
+        {
+            char TemporaryBuffer1[STRING_SIZE], TemporaryBuffer2[STRING_SIZE], Helper[STRING_SIZE];
+            bool Find = false;
+            for (int d = 33; d < 127; d++)
+            {
+                // Copying
+                strcpy(TemporaryBuffer1, PassDictionary[i]);
+                // Writing to
+                strcat(TemporaryBuffer1, (char)d);
+                
+                // Copying
+                strcpy(Helper, PassDictionary[i]);
+                strcpy(TemporaryBuffer2, (char)d);
+                // Writing to
+                strcat(TemporaryBuffer2, Helper);
+
+                if(strcmp(md5(TemporaryBuffer1, strlen(TemporaryBuffer1)), PassToCrack[k]) == 0)
+                {
+                    // Erasing password here if found
+                    pthread_mutex_lock(&mut);
+                    PassToCrack[k] = "\0";
+                    Solved[SolvedCount] = TemporaryBuffer1;
+                    SolvedCount++;
+
+                    // Telling watcher to wake up
+                    pthread_cond_signal(&cond_mutex);
+
+                    pthread_mutex_unlock(&mut);
+                    Find = true;
+                    break;
+                }
+                else if(strcmp(md5(TemporaryBuffer2, strlen(TemporaryBuffer2)), PassToCrack[k]) == 0)
+                {
+                    // Erasing password here if found
+                    pthread_mutex_lock(&mut);
+                    PassToCrack[k] = "\0";
+                    Solved[SolvedCount] = TemporaryBuffer2;
+                    SolvedCount++;
+
+                    // Telling watcher to wake up
+                    pthread_cond_signal(&cond_mutex);
+
+                    pthread_mutex_unlock(&mut);
+                    Find = true;
+                    break;
+                }
+            }
+            if (Find == true)
+                break;
+            
+        }
     }
 }
 
