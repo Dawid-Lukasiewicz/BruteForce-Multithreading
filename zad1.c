@@ -128,7 +128,7 @@ void FindPassword(int i)
                 strcat(ModPass1, Helper1);
                 strcat(ModPass2, Helper2);
                 
-                printf("%s %s", ModPass1, ModPass2);
+                // printf("%s %s", ModPass1, ModPass2);
 
                 if(strcmp(md5(ModPass1, strlen(ModPass1)), PassToCrack[k]) == 0)
                 {
@@ -166,7 +166,7 @@ void FindPassword(int i)
                 memset(Helper1, 0, strlen(Helper1));
                 memset(Helper2, 0, strlen(Helper2));
                 
-                sleep(1);
+                // sleep(1);
             }
             if (Find == true)
                 break;
@@ -321,18 +321,18 @@ int main(int argc, char *argv[])
         PassToCrack[i] = md5(PassToCrack[i], strlen(PassToCrack[i]));
     }
 
-    // pthread_create(&threads[3], &attr, Watcher, (void*)3);
-    // sleep(3);
+    pthread_create(&threads[3], &attr, Watcher, (void*)3);
+    sleep(3);
     pthread_create(&threads[0], &attr, OnlyCharacter, (void*)0);
-    // pthread_create(&threads[1], &attr, MixedComparison, (void*)1);
-    // pthread_create(&threads[2], &attr, OnlyNumber, (void*)2);
+    pthread_create(&threads[1], &attr, MixedComparison, (void*)1);
+    pthread_create(&threads[2], &attr, OnlyNumber, (void*)2);
     
     
     pthread_attr_destroy(&attr);
     pthread_join(threads[0], NULL);
-    // pthread_join(threads[1], NULL);
-    // pthread_join(threads[2], NULL);
-    // pthread_join(threads[3], NULL);
+    pthread_join(threads[1], NULL);
+    pthread_join(threads[2], NULL);
+    pthread_join(threads[3], NULL);
 
     pthread_cond_destroy(&cond_mutex);
     // Freeing allocated memory
